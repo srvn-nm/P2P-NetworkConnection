@@ -23,7 +23,9 @@ def is_port_busy(port):
 
 def file_sender(dest_ip, dest_port, dest_filename):
     HOST = dest_ip
+    print(f'this is host in file sender {HOST}')
     PORT = int(dest_port)
+    print(f'this is port in file sender {PORT}')
     BUFFER_SIZE = 1024
 
     try:
@@ -39,14 +41,12 @@ def file_sender(dest_ip, dest_port, dest_filename):
             print("File couldn't be found! >-<")
             return
 
-
     if is_string:
         message = {"type": "string", "data": data}
     else:
         message = {"type": "image", "data": data}
 
     encoded_message = json.dumps(message).encode()
-
 
     if not is_string:
         # Send image data over UDP connection
@@ -74,38 +74,43 @@ class Peer:
         self.init_url = 'http://127.1.1.2:8080/init'
         self.get_usernames = 'http://127.1.1.2:8080/getAll'
         self.get_ip = 'http://127.1.1.2:8080/getIp?username='
-        threading.Thread(target=self.listener, args=(self.ip_address, )).start()
+        t1 = threading.Thread(target=self.listener, args=(self.ip_address,))
+        t1.start()
 
     def listener(self, k):
+
+        tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        local_address = (self.ip_address, self.tcp_handshake_port)
+        tcp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        tcp_socket.bind(local_address)
         while True:
-            tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            local_address = (self.ip_address, self.tcp_handshake_port)
-            # print("local address: "+str(local_address))
-            tcp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            tcp_socket.bind(local_address)
             tcp_socket.listen()
             client_sock, client_address = tcp_socket.accept()
             data = client_sock.recv(1024).decode('utf-8')
             data = data.split(':')
-            # print("data in listener: "+str(data))
+            print("data in listener: " + str(data))
             dest_ip = data[0]
             dest_port = data[1]
             dest_filename = data[2]
-            inp = input(f"A system with IP {client_address} wants to connect you and receive '{dest_filename}', do you want to accept?\n1. Yes\n2. No\nInput: ")
+            # inp = input(f"A system with IP {client_address} wants to connect you and receive '{dest_filename}', do you want to accept?\n1. Yes\n2. No\nInput: ")
+            print(f"A system with IP {client_address} wants to connect you and receive '{dest_filename}'")
             self.terminateFlag = False
-            while inp:
-                if inp == '1':
+            while True:
+                # print(f"{inp} is input in listener!")
+                # if inp == '1':
+                try:
                     tcp_socket.sendall(b"Done")
                     threading.Thread(target=file_sender, args=(dest_ip, dest_port, dest_filename)).start()
-                    # print('option 1 in listener')
+                    print('option 1 in listener')
                     break
-                elif inp == '2':
+                # elif inp == '2':
+                except:
                     tcp_socket.sendall(b"None")
-                    # print('option 2 in listener')
+                    print('option 2 in listener')
                     break
                 else:
                     print('Invalid input!')
-                inp = input(f"A system with IP {client_address} wants to connect you and receive '{dest_filename}', do you want to accept?\n1. Yes\n2. No\nInput: ")
+                # inp = input(f"A system with IP {client_address} wants to connect you and receive '{dest_filename}', do you want to accept?\n1. Yes\n2. No\nInput: ")
             tcp_socket.close()
             self.terminateFlag = True
             self.run()
@@ -119,40 +124,60 @@ class Peer:
         if empty_port == 1:
             print("You can't connect to ports right now! >-<")
             return
-
+        print(f'{empty_port} is the empty port in file receiver')
         try:
             tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            print(1)
             port_and_ip = (my_ip, 10000)
+            print(2)
             tcp_socket.connect(port_and_ip)
+            print(3)
             message = f"{target_ip}:{empty_port}:{filename}"
+            print(4)
             tcp_socket.sendall(message.encode())
+            print(5)
             data = tcp_socket.recv(1024)
+            print(6)
             print(data.decode())
-            response = json.loads(data.decode())
+            print(7)
+            # response = json.loads(data.decode())
+            print(8)
             tcp_socket.close()
-
+            print(9)
             udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            print(10)
             udp_socket.bind((target_ip, empty_port))
+            print(11)
             # Process received image/video data over UDP connection
             chunks = []
             while True:
+                print(12)
                 chunk, addr = udp_socket.recvfrom(1024)
                 if not chunk:
                     break
+                print(13)
                 chunks.append(chunk)
 
             # Combine the received chunks into a single byte string
+            print(14)
             data = b''.join(chunks)
             try:
+                print(15)
                 received_image = Image.open(io.BytesIO(data))
+                print(16)
                 received_image.show()
+                print(17)
                 file = open(f'./file/{filename}', "wb")
+                print(18)
                 file.write(data)
-            except:
+                print(19)
+            except Exception as e:
+                print(e)
                 print("Error appeared while using the file!")
 
             udp_socket.close()
-        except:
+        except Exception as e:
+            print(e)
             print('Error connecting to peers >-<')
         self.terminateFlag = True
         self.run()
@@ -182,33 +207,40 @@ class Peer:
         # print("get_specific_ip_action")
         target_username = input("Enter Target username:")
         try:
-            response = requests.get(url = self.get_ip + target_username).text
+            response = requests.get(url=self.get_ip + target_username).text
         except:
             response = "Error"
         print('HTTP Server Response:', response)
 
     def request_for_connection_action(self):
         print('request_for_connection_action')
-        target_ip = input('Enter your target IP: ')
+        target_ip = input('Enter your target username: ')
         filename = input('Enter file route: ')
         threading.Thread(target=self.file_receiver, args=(self.ip_address, target_ip, filename)).start()
 
     def run(self):
-        print("Hello ^-^\nYou can connect others in here for transferring data!\nWhenever you want to exit press enter!")
-        choice = input('Choose one option below:\n1. Initialization\n2. Get near usernames\n3. Get specific IP\n4. Request for connection\nInput: ')
+        print(
+            "Hello ^-^\nYou can connect others in here for transferring data!\nWhenever you want to exit press enter!")
+        choice = input(
+            'Choose one option below:\n1. Initialization\n2. Get near usernames\n3. Get specific IP\n4. Request for connection\nInput: ')
         while choice and self.terminateFlag:
-            if choice == '1':
+            if choice == '1' and self.terminateFlag:
                 self.init_action()
-            elif choice == '2':
+            elif choice == '2' and self.terminateFlag:
                 self.get_usernames_action()
-            elif choice == '3':
+            elif choice == '3' and self.terminateFlag:
                 self.get_specific_ip_action()
-            elif choice == '4':
+            elif choice == '4' and self.terminateFlag:
                 self.request_for_connection_action()
                 break
             else:
                 print("Wrong choice! Please try again.")
-            choice = input('Choose one option below:\n1. Initialization\n2. Get near usernames\n3. Get specific IP\n4. Request for connection\nInput: ')
+            if self.terminateFlag:
+                choice = input(
+                    'Choose one option below:\n1. Initialization\n2. Get near usernames\n3. Get specific IP\n4. Request for connection\nInput: ')
+            else:
+                break
+
 
 if __name__ == "__main__":
     peer = Peer()
