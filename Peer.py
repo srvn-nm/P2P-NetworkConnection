@@ -21,11 +21,11 @@ def is_port_busy(port):
         return True
 
 
-def file_sender(dest_ip, dest_port, dest_filename):
+def file_sender(dest_ip, dest_port, dest_filename, udp_socket):
     HOST = dest_ip
     print(f'this is host in file sender {HOST}')
     PORT = int(dest_port)
-    print(f'this is port in file sender {PORT}')
+    # print(f'this is port in file sender {PORT}')
     BUFFER_SIZE = 1024
 
     try:
@@ -42,15 +42,15 @@ def file_sender(dest_ip, dest_port, dest_filename):
             return
 
     if is_string:
-        message = {"type": "string", "data": data}
+        message = {"type": "string", "data": str(data)}
     else:
-        message = {"type": "image", "data": data}
+        message = {"type": "image", "data": str(data)}
 
     encoded_message = json.dumps(message).encode()
 
     if not is_string:
         # Send image data over UDP connection
-        udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         for i in range(0, len(data), BUFFER_SIZE):
             chunk = data[i:i + BUFFER_SIZE]
             udp_socket.sendto(chunk, (HOST, PORT))
@@ -58,11 +58,11 @@ def file_sender(dest_ip, dest_port, dest_filename):
         udp_socket.sendto(b'', (HOST, PORT))
         udp_socket.close()
     else:
-        tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        tcp_socket.connect((HOST, PORT))
+        # tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # udp_socket.connect((socket.gethostbyname(socket.gethostname()), PORT))
         # Send the message over TCP connection
-        tcp_socket.sendall(encoded_message)
-        tcp_socket.close()
+        udp_socket.sendall(encoded_message)
+        udp_socket.close()
 
 
 class Peer:
@@ -83,13 +83,13 @@ class Peer:
         local_address = (self.ip_address, self.tcp_handshake_port)
         tcp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         tcp_socket.bind(local_address)
-        print('local address: '+str(local_address))
+        # print('local address: '+str(local_address))
         while True:
             tcp_socket.listen(2)
             client_sock, client_address = tcp_socket.accept()
             data = client_sock.recv(1024).decode('utf-8')
             data = data.split(':')
-            print("data in listener: " + str(data))
+            # print("data in listener: " + str(data))
             dest_ip = data[0]
             dest_port = data[1]
             dest_filename = data[2]
@@ -100,20 +100,20 @@ class Peer:
                 # print(f"{inp} is input in listener!")
                 # if inp == '1':
                 try:
-                    print(100)
+                    # print(100)
                     # client_sock.bind((self.ip_address, int(dest_port)))
                     client_sock.sendall(b"Done")
-                    print(101)
-                    threading.Thread(target=file_sender, args=(dest_ip, dest_port, dest_filename)).start()
-                    print('option 1 in listener')
+                    # print(101)
+                    threading.Thread(target=file_sender, args=(dest_ip, dest_port, dest_filename, client_sock)).start()
+                    # print('option 1 in listener')
                     break
                 # elif inp == '2':
                 except Exception as e:
-                    print(102)
+                    # print(102)
                     print(e)
                     # client_sock.bind((self.ip_address, int(dest_port)))
                     client_sock.sendall(b"None")
-                    print('option 2 in listener')
+                    # print('option 2 in listener')
                     break
                 else:
                     print('Invalid input!')
@@ -131,53 +131,54 @@ class Peer:
         if empty_port == 1:
             print("You can't connect to ports right now! >-<")
             return
-        print(f'{empty_port} is the empty port in file receiver')
+        # print(f'{empty_port} is the empty port in file receiver')
         try:
             tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            print(1)
+            # print(1)
             port_and_ip = (my_ip, 10000)
-            print(2)
+            # print(2)
             tcp_socket.connect(port_and_ip)
-            print(3)
+            # print(3)
             message = f"{my_ip}:{empty_port}:{filename}"
-            print(4)
+            # print(4)
             tcp_socket.sendall(message.encode())
-            print(5)
+            # print(5)
             data = tcp_socket.recv(1024)
-            print(6)
-            print(data.decode())
-            print(7)
+            # print(6)
+            # print(data.decode())
+            # print(7)
             response = json.loads(data.decode())
-            print(8)
+            print('Response: \n'+response)
+            # print(8)
             tcp_socket.close()
-            print(9)
+            # print(9)
             udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            print(10)
+            # print(10)
             udp_socket.bind((target_ip, empty_port))
-            print(11)
+            # print(11)
             # Process received image/video data over UDP connection
             chunks = []
             while True:
-                print(12)
+                # print(12)
                 chunk, addr = udp_socket.recvfrom(1024)
                 if not chunk:
                     break
-                print(13)
+                # print(13)
                 chunks.append(chunk)
 
             # Combine the received chunks into a single byte string
-            print(14)
+            # print(14)
             data = b''.join(chunks)
             try:
-                print(15)
+                # print(15)
                 received_image = Image.open(io.BytesIO(data))
-                print(16)
+                # print(16)
                 received_image.show()
-                print(17)
+                # print(17)
                 file = open(f'./file/{filename}', "wb")
-                print(18)
+                # print(18)
                 file.write(data)
-                print(19)
+                # print(19)
             except Exception as e:
                 print(e)
                 print("Error appeared while using the file!")
