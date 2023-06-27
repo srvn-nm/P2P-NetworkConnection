@@ -83,8 +83,9 @@ class Peer:
         local_address = (self.ip_address, self.tcp_handshake_port)
         tcp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         tcp_socket.bind(local_address)
+        print('local address: '+str(local_address))
         while True:
-            tcp_socket.listen()
+            tcp_socket.listen(2)
             client_sock, client_address = tcp_socket.accept()
             data = client_sock.recv(1024).decode('utf-8')
             data = data.split(':')
@@ -99,13 +100,19 @@ class Peer:
                 # print(f"{inp} is input in listener!")
                 # if inp == '1':
                 try:
-                    tcp_socket.sendall(b"Done")
+                    print(100)
+                    # client_sock.bind((self.ip_address, int(dest_port)))
+                    client_sock.sendall(b"Done")
+                    print(101)
                     threading.Thread(target=file_sender, args=(dest_ip, dest_port, dest_filename)).start()
                     print('option 1 in listener')
                     break
                 # elif inp == '2':
-                except:
-                    tcp_socket.sendall(b"None")
+                except Exception as e:
+                    print(102)
+                    print(e)
+                    # client_sock.bind((self.ip_address, int(dest_port)))
+                    client_sock.sendall(b"None")
                     print('option 2 in listener')
                     break
                 else:
@@ -132,7 +139,7 @@ class Peer:
             print(2)
             tcp_socket.connect(port_and_ip)
             print(3)
-            message = f"{target_ip}:{empty_port}:{filename}"
+            message = f"{my_ip}:{empty_port}:{filename}"
             print(4)
             tcp_socket.sendall(message.encode())
             print(5)
@@ -140,7 +147,7 @@ class Peer:
             print(6)
             print(data.decode())
             print(7)
-            # response = json.loads(data.decode())
+            response = json.loads(data.decode())
             print(8)
             tcp_socket.close()
             print(9)
