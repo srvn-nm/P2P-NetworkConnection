@@ -248,7 +248,7 @@ class Peer:
         print('HTTP Server Response:', response)
 
     def request_for_connection_action(self):
-        print('request_for_connection_action')
+        # print('request_for_connection_action')
         target_ip = input('Enter your target username: ')
         filename = input('Enter file route: ')
         threading.Thread(target=self.file_receiver, args=(self.ip_address, target_ip, filename)).start()
