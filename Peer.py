@@ -85,13 +85,16 @@ class Peer:
         # print(f'this is port in file sender {PORT}')
         BUFFER_SIZE = 1024
 
+        is_string = True
+
         try:
             print(403)
             image = Image.open('./files/' + dest_filename)
             print(404)
             data = image.tobytes()
             print(405)
-            is_string = False
+            if '.jpg' in dest_filename or '.jpeg' in dest_filename or '.png' in dest_filename or '.gif' in dest_filename:
+                is_string = False
         except FileNotFoundError:
             try:
                 print(400)
@@ -111,7 +114,7 @@ class Peer:
             message = {"type": "image", "data": str(data)}
 
         encoded_message = json.dumps(message).encode()
-        print(f'encoded message is: {encoded_message}')
+        # print(f'encoded message is: {encoded_message}')
         if not is_string:
             # Send image data over UDP connection
             # udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -119,8 +122,13 @@ class Peer:
             for i in range(0, len(data), BUFFER_SIZE):
                 print(407)
                 chunk = data[i:i + BUFFER_SIZE]
+                print(PORT)
+                try:
+                    udp_socket.sendto(chunk, (HOST, PORT))
+                except Exception as e:
+                    print(e)
+                    print('error in sending chunks!')
                 print(408)
-                udp_socket.sendto(chunk, (HOST, PORT))
 
             print(409)
             udp_socket.sendto(b'', (HOST, PORT))
@@ -164,18 +172,18 @@ class Peer:
             try:
                 response = json.loads(data.decode())
                 print('Response: \n' + response)
-            finally:
+            except json.JSONDecodeError:
                 print(8)
                 tcp_socket.close()
                 print(9)
                 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 print(10)
-                udp_socket.bind((target_ip, empty_port))
+                udp_socket.bind((my_ip, empty_port))
                 print(11)
                 # Process received image/video data over UDP connection
                 chunks = []
                 while True:
-                    print(12)
+                    print(empty_port)
                     chunk, addr = udp_socket.recvfrom(1024)
                     if not chunk:
                         break
