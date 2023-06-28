@@ -172,7 +172,7 @@ class Peer:
             # print(7)
             try:
                 tcp_socket.close()
-                if data.decode() != 'DONE':
+                if data.decode() != 'Done':
                     response = json.loads(data.decode())
                     print('Response: \n' + response)
             except json.JSONDecodeError:
