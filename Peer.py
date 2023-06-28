@@ -21,62 +21,6 @@ def is_port_busy(port):
         return True
 
 
-def file_sender(dest_ip, dest_port, dest_filename, udp_socket):
-    HOST = dest_ip
-    # print(f'this is host in file sender {HOST}')
-    PORT = int(dest_port)
-    # print(f'this is port in file sender {PORT}')
-    BUFFER_SIZE = 1024
-
-    try:
-        print(403)
-        image = Image.open('./files/' + dest_filename)
-        print(404)
-        data = image.tobytes()
-        print(405)
-        is_string = False
-    except FileNotFoundError:
-        try:
-            print(400)
-            with open('./files/' + dest_filename, 'rb') as f:
-                print(401)
-                data = f.read()
-                print(402)
-                is_string = True
-
-        except FileNotFoundError:
-            print("File couldn't be found! >-<")
-            return
-
-    if is_string:
-        message = {"type": "string", "data": str(data)}
-    else:
-        message = {"type": "image", "data": str(data)}
-
-    encoded_message = json.dumps(message).encode()
-    print(f'encoded message is: {encoded_message}')
-    if not is_string:
-        # Send image data over UDP connection
-        # udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        print(406)
-        for i in range(0, len(data), BUFFER_SIZE):
-            print(407)
-            chunk = data[i:i + BUFFER_SIZE]
-            print(408)
-            udp_socket.sendto(chunk, (HOST, PORT))
-
-        print(409)
-        udp_socket.sendto(b'', (HOST, PORT))
-        print(410)
-        udp_socket.close()
-    else:
-        # tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # udp_socket.connect((socket.gethostbyname(socket.gethostname()), PORT))
-        # Send the message over TCP connection
-        udp_socket.sendall(encoded_message)
-        udp_socket.close()
-
-
 class Peer:
     def __init__(self):
         self.terminateFlag = True
@@ -116,7 +60,7 @@ class Peer:
                     # client_sock.bind((self.ip_address, int(dest_port)))
                     client_sock.sendall(b"Done")
                     # print(101)
-                    threading.Thread(target=file_sender, args=(dest_ip, dest_port, dest_filename, client_sock)).start()
+                    threading.Thread(target=self.file_sender, args=(dest_ip, dest_port, dest_filename, client_sock)).start()
                     # print('option 1 in listener')
                     break
                 # elif inp == '2':
@@ -133,6 +77,64 @@ class Peer:
             tcp_socket.close()
             self.terminateFlag = True
             self.run()
+
+    def file_sender(self, dest_ip, dest_port, dest_filename, udp_socket):
+        HOST = dest_ip
+        # print(f'this is host in file sender {HOST}')
+        PORT = int(dest_port)
+        # print(f'this is port in file sender {PORT}')
+        BUFFER_SIZE = 1024
+
+        try:
+            print(403)
+            image = Image.open('./files/' + dest_filename)
+            print(404)
+            data = image.tobytes()
+            print(405)
+            is_string = False
+        except FileNotFoundError:
+            try:
+                print(400)
+                with open('./files/' + dest_filename, 'rb') as f:
+                    print(401)
+                    data = f.read()
+                    print(402)
+                    is_string = True
+
+            except FileNotFoundError:
+                print("File couldn't be found! >-<")
+                return
+
+        if is_string:
+            message = {"type": "string", "data": str(data)}
+        else:
+            message = {"type": "image", "data": str(data)}
+
+        encoded_message = json.dumps(message).encode()
+        print(f'encoded message is: {encoded_message}')
+        if not is_string:
+            # Send image data over UDP connection
+            # udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            print(406)
+            for i in range(0, len(data), BUFFER_SIZE):
+                print(407)
+                chunk = data[i:i + BUFFER_SIZE]
+                print(408)
+                udp_socket.sendto(chunk, (HOST, PORT))
+
+            print(409)
+            udp_socket.sendto(b'', (HOST, PORT))
+            print(410)
+            udp_socket.close()
+        else:
+            # tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # udp_socket.connect((socket.gethostbyname(socket.gethostname()), PORT))
+            # Send the message over TCP connection
+            udp_socket.sendall(encoded_message)
+            udp_socket.close()
+
+        print('Everything transferred successfully ^-^')
+        self.run()
 
     def file_receiver(self, my_ip, target_ip, filename):
         self.terminateFlag = False
@@ -159,43 +161,45 @@ class Peer:
             # print(6)
             # print(data.decode())
             print(7)
-            response = json.loads(data.decode())
-            print('Response: \n' + response)
-            print(8)
-            tcp_socket.close()
-            print(9)
-            udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            print(10)
-            udp_socket.bind((target_ip, empty_port))
-            print(11)
-            # Process received image/video data over UDP connection
-            chunks = []
-            while True:
-                print(12)
-                chunk, addr = udp_socket.recvfrom(1024)
-                if not chunk:
-                    break
-                print(13)
-                chunks.append(chunk)
-
-            # Combine the received chunks into a single byte string
-            print(14)
-            data = b''.join(chunks)
             try:
-                print(15)
-                received_image = Image.open(io.BytesIO(data))
-                print(16)
-                received_image.show()
-                print(17)
-                file = open(f'./file/{filename}', "wb")
-                print(18)
-                file.write(data)
-                print(19)
-            except Exception as e:
-                print(e)
-                print("Error appeared while using the file!")
+                response = json.loads(data.decode())
+                print('Response: \n' + response)
+            finally:
+                print(8)
+                tcp_socket.close()
+                print(9)
+                udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                print(10)
+                udp_socket.bind((target_ip, empty_port))
+                print(11)
+                # Process received image/video data over UDP connection
+                chunks = []
+                while True:
+                    print(12)
+                    chunk, addr = udp_socket.recvfrom(1024)
+                    if not chunk:
+                        break
+                    print(13)
+                    chunks.append(chunk)
 
-            udp_socket.close()
+                # Combine the received chunks into a single byte string
+                print(14)
+                data = b''.join(chunks)
+                try:
+                    print(15)
+                    received_image = Image.open(io.BytesIO(data))
+                    print(16)
+                    received_image.show()
+                    print(17)
+                    file = open(f'./file/{filename}', "wb")
+                    print(18)
+                    file.write(data)
+                    print(19)
+                except Exception as e:
+                    print(e)
+                    print("Error appeared while using the file!")
+
+                udp_socket.close()
         except Exception as e:
             print(e)
             print('Error connecting to peers >-<')
