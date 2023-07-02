@@ -114,7 +114,7 @@ class Peer:
                 return
 
 
-        encoded_message = json.dumps(data.decode()).encode()
+        #
         # print(f'encoded message is: {encoded_message}')
         if not is_string:
             # Send image data over UDP connection
@@ -139,6 +139,7 @@ class Peer:
             # tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             # udp_socket.connect((socket.gethostbyname(socket.gethostname()), PORT))
             # Send the message over TCP connection
+            encoded_message = json.dumps(data.decode()).encode()
             udp_socket.sendall(encoded_message)
             udp_socket.close()
 
